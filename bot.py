@@ -3,7 +3,7 @@ import random
 import time
 
 # Твои данные для подключения
-API_TOKEN = '8823750467:AAFOLtLb1ZkTJtEjPLRE7YA14tYvx8pAeok'
+API_TOKEN = '8823750467:AAEjkQPvGfw0YZlw_bQ-COHeMlDemhePnTI'
 USER_ID = 5659870865
 
 bot = telebot.TeleBot(API_TOKEN)
