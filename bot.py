@@ -6,7 +6,7 @@ from flask import Flask
 from threading import Thread
 
 # Твои данные
-API_TOKEN = '8823750467:AAFOLtLb1ZkTJtEjPLRE7YA14tYvx8pAeok'
+API_TOKEN = '8823750467:AAHDFWyxun2_IeX5I-hcL69c_3gCbV5wGvM'
 USER_ID = 5659870865
 
 bot = telebot.TeleBot(API_TOKEN)
