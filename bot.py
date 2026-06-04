@@ -1,14 +1,16 @@
 import telebot
+import os
 import random
 import time
+from flask import Flask
+from threading import Thread
 
-# Твои данные для подключения
-API_TOKEN = '8823750467:AAEjkQPvGfw0YZlw_bQ-COHeMlDemhePnTI'
+# Твои данные
+API_TOKEN = '8823750467:AAFOLtLb1ZkTJtEjPLRE7YA14tYvx8pAeok'
 USER_ID = 5659870865
 
 bot = telebot.TeleBot(API_TOKEN)
 
-# Базовые корпоративные фразы (55 штук)
 common_phrases = [
     "Судя по показателям пульса, вы всё ещё живы. Какое досадное упущение со стороны местной фауны.",
     "Объект в данный момент находится в трёхстах метрах от вашей позиции. Рекомендуем не совершать резких движений. И не дышать.",
@@ -67,7 +69,6 @@ common_phrases = [
     "Протокол тестирования подходит к финальной стадии. Пожалуйста, не предпринимайте попыток связаться с внешним миром до окончания загрузки."
 ]
 
-# Твои редкие фразы (5 штук)
 rare_phrases = [
     "Ваш конец уже близко, не ищите способы избежать наказания, вы лишь тратите важный для нас жизненный ресурс.",
     "Не глядите дальше носа, все возможные варианты побега с наших лап - лишь предоставленные нами возможности, если конечно не хотите быть списанными со счетов раньше времени, лол.",
@@ -76,42 +77,30 @@ rare_phrases = [
     "В связи плохими погодными условиями B-corp перестаёт следить за вами, не бойтесь, это не надолго."
 ]
 
+# Веб-часть для Render
+app = Flask(__name__)
+@app.route('/')
+def home():
+    return "B-Corp Terminal Online"
+
+def run_web():
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+
 def send_random_notification():
-    # Шанс 15%, что выпадет твоя редкая фраза, и 85% — стандартная корпоративная
-    if random.random() < 0.15:
-        phrase = random.choice(rare_phrases)
-    else:
-        phrase = random.choice(common_phrases)
-        
+    phrase = random.choice(rare_phrases) if random.random() < 0.15 else random.choice(common_phrases)
     try:
         bot.send_message(USER_ID, phrase)
-        print(f"Отправлено сообщение: {phrase}")
     except Exception as e:
-        print(f"Ошибка при отправке: {e}")
+        print(f"Ошибка: {e}")
 
-# Команда /start для проверки связи
-@bot.message_handler(commands=['start'])
-def start_message(message):
-    if message.chat.id == USER_ID:
-        bot.send_message(USER_ID, "Система B-Corp Terminal запущена. Мониторинг вашего устройства начат.")
-        # Сразу отправляем первую случайную фразу
-        send_random_notification()
-    else:
-        bot.send_message(message.chat.id, "Доступ запрещен. Ошибка авторизации терминала.")
-
-# Основной цикл работы бота
-if __name__ == '__main__':
-    # Запускаем фоновую проверку сообщений команды /start
-    import threading
-    threading.Thread(target=bot.infinity_polling, daemon=True).start()
-    
-    print("Бот успешно запущен и ожидает...")
-    
-    # Цикл для отправки уведомлений по времени
+def bot_loop():
     while True:
-        # Случайный интервал времени между сообщениями от 2 до 5 часов (в секундах)
-        # Можешь изменить эти цифры, если хочешь чаще или реже
-        interval = random.randint(2 * 3600, 5 * 3600)
+        interval = random.randint(3600, 7200)
         time.sleep(interval)
         send_random_notification()
-      
+
+if __name__ == '__main__':
+    Thread(target=run_web, daemon=True).start()
+    Thread(target=bot_loop, daemon=True).start()
+    bot.infinity_polling()
+    
