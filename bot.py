@@ -2,6 +2,7 @@ import telebot
 import os
 import random
 import time
+import requests
 from flask import Flask
 from threading import Thread
 
@@ -77,34 +78,72 @@ rare_phrases = [
     "В связи плохими погодными условиями B-corp перестаёт следить за вами, не бойтесь, это не надолго."
 ]
 
-# Веб-часть для Render
 app = Flask(__name__)
+
 @app.route('/')
 def home():
-    return "B-Corp Terminal Online"
+    return "B-Corp Terminal Online", 200
 
 def run_web():
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
+
+# Функция само-пинга, чтобы Render не усыплял Web Service
+def ping_self():
+    # Ждем 30 секунд после старта, чтобы сервер успел подняться
+    time.sleep(30)
+    # Пытаемся узнать URL нашего приложения на Render
+    url = os.environ.get('RENDER_EXTERNAL_URL')
+    
+    if not url:
+        print("Предупреждение: Переменная RENDER_EXTERNAL_URL не найдена. Пинг само-сна отключен.")
+        return
+
+    print(f"Анти-сон запущен для URL: {url}")
+    while True:
+        try:
+            # Отправляем запрос на свой же сайт раз в 10 минут
+            requests.get(url, timeout=10)
+            print("Пинг Render отправлен успешно. Бот бодрствует.")
+        except Exception as e:
+            print(f"Ошибка само-пинга: {e}")
+        time.sleep(600)  # 10 минут
 
 def send_random_notification():
     phrase = random.choice(rare_phrases) if random.random() < 0.15 else random.choice(common_phrases)
     try:
         bot.send_message(USER_ID, phrase)
+        print(f"Лог отправлен: {phrase[:30]}...")
     except Exception as e:
-        print(f"Ошибка: {e}")
+        print(f"Ошибка отправки сообщения: {e}")
 
 @bot.message_handler(commands=['start'])
 def start_command(message):
-    bot.send_message(USER_ID, "B-Corp Terminal активен. Начинаю скрытое наблюдение.")
+    try:
+        bot.send_message(USER_ID, "B-Corp Terminal активен. Начинаю скрытое наблюдение.")
+    except Exception as e:
+        print(f"Ошибка команды /start: {e}")
 
 def bot_loop():
+    # Небольшая пауза при запуске скрипта
+    time.sleep(10)
     while True:
-        interval = random.randint(3600, 7200)
+        interval = random.randint(3600, 7200) # От 1 до 2 часов
+        print(f"Следующий лог B-Corp будет отправлен через {interval} секунд.")
         time.sleep(interval)
         send_random_notification()
 
 if __name__ == '__main__':
+    # Запуск веб-сервера Flask
     Thread(target=run_web, daemon=True).start()
+    
+    # Запуск пинга против засыпания Render
+    Thread(target=ping_self, daemon=True).start()
+    
+    # Запуск бесконечного цикла рассылки отчетов
     Thread(target=bot_loop, daemon=True).start()
+    
+    # Запуск самого бота
+    print("B-Corp логгер успешно инициализирован...")
     bot.infinity_polling()
     
